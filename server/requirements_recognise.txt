@@ -1,0 +1,8 @@
+facenet-pytorch
+torch
+torchvision
+pillow
+numpy
+opencv-python
+
+# for face recognition
