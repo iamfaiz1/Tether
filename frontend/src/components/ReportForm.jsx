@@ -1,14 +1,44 @@
 import React, { useState } from "react";
-import {IconUser, IconMail, IconMapPin, IconPlus, IconX, IconUpload} from "./icons/Icons";
+import {
+  IconUser,
+  IconMail,
+  IconMapPin,
+  IconPlus,
+  IconX,
+  IconUpload
+} from "./icons/Icons";
 
-
-export default function ReportForm() {
+export default function ReportForm({ onMatchFound }) {
   const [role, setRole] = useState("parent");
+
+  // Reporter Info
+  const [reporter, setReporter] = useState({
+    name: "",
+    email: "",
+    altEmail: "",
+    phone: "",
+    altPhone: ""
+  });
+
+  // Child Info
+  const [child, setChild] = useState({
+    name: "",
+    age: "",
+    skin: "",
+    city: "",
+    address: ""
+  });
+
   const [birthMarks, setBirthMarks] = useState([""]);
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+
+  const handleReporter = (key, val) =>
+    setReporter({ ...reporter, [key]: val });
+
+  const handleChild = (key, val) =>
+    setChild({ ...child, [key]: val });
 
   const handleAddBirthmark = () => setBirthMarks([...birthMarks, ""]);
   const handleRemoveBirthmark = (i) =>
@@ -24,27 +54,63 @@ export default function ReportForm() {
     }
   };
 
-  async function handleSubmit(e) {
+  // ===========================
+  // SUBMIT TO BACKEND
+  // ===========================
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setResult(null);
+
+    const form = new FormData();
+
+    form.append("role", role);
+
+    // reporter
+    form.append("reporter_name", reporter.name);
+    form.append("reporter_email", reporter.email);
+    form.append("reporter_alt_email", reporter.altEmail);
+    form.append("reporter_phone", reporter.phone);
+    form.append("reporter_alt_phone", reporter.altPhone);
+
+    // child
+    form.append("child_name", child.name);
+    form.append("child_age", child.age);
+    form.append("skin_complexion", child.skin);
+    form.append("city", child.city);
+
+    if (role === "volunteer") {
+      form.append("address", child.address);
+    } else {
+      form.append("address", "");
+    }
+
+    // birthmarks
+    form.append("birthmarks", JSON.stringify(birthMarks));
+
+    // file
+    form.append("file", photo);
 
     try {
-      const form = e.target;
-      const fd = new FormData(form);
-      birthMarks.forEach((b) => fd.append("birth_marks", b));
-      fd.append("photo", photo);
+      const res = await fetch("http://127.0.0.1:8000/api/report", {
+        method: "POST",
+        body: form
+      });
 
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Upload failed");
-      setResult({ success: true, data });
-    } catch (err) {
-      setResult({ success: false, error: err.message });
-    } finally {
-      setLoading(false);
+      console.log("REPORT API RESPONSE →", data);
+
+      if (data.match_found) {
+        onMatchFound(data.submission_id);  // go to match page
+      } else {
+        alert("Report submitted. No match found.");
+      }
+    } catch (e) {
+      console.error("UPLOAD ERROR", e);
+      alert("Upload failed!");
     }
-  }
+
+    setLoading(false);
+  };
 
   const roleBtn = (r) =>
     `w-1/2 py-3 rounded-lg font-semibold ${
@@ -54,263 +120,173 @@ export default function ReportForm() {
     }`;
 
   const inputBox =
-    "w-full pl-10 pr-3 py-3 border rounded-lg border-slate-300 focus:ring-2 focus:ring-cyan-500 outline-none transition-all";
+    "w-full pl-10 pr-3 py-3 border rounded-lg border-slate-300 focus:ring-2 focus:ring-cyan-500 outline-none";
+
   const labelClass = "text-sm font-medium text-slate-700 mb-2 block";
 
   return (
     <section id="report-form" className="py-20 bg-slate-50">
-      <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-lg border border-slate-200">
+      <div className="max-w-4xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-lg border">
         <h2 className="text-3xl font-bold text-center mb-2 text-slate-800">
           Tether - Report
         </h2>
-        <p className="text-center text-slate-500 mb-8">
-          Please fill all required fields (*). Your data is processed securely.
-        </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Role Selector */}
+
+          {/* ROLE BUTTONS */}
           <div className="flex bg-slate-100 p-1 rounded-lg mb-8">
-            <button
-              type="button"
-              onClick={() => setRole("parent")}
-              className={roleBtn("parent")}
-            >
-              I’m a Parent
+            <button type="button" className={roleBtn("parent")} onClick={() => setRole("parent")}>
+              I'm a Parent
             </button>
-            <button
-              type="button"
-              onClick={() => setRole("volunteer")}
-              className={roleBtn("volunteer")}
-            >
-              I’m a Volunteer
+            <button type="button" className={roleBtn("volunteer")} onClick={() => setRole("volunteer")}>
+              I'm a Volunteer
             </button>
           </div>
 
-          {/* Parent or Volunteer Info */}
-          {role === "parent" ? (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Parent Name*</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3">
-                    <IconUser />
-                  </span>
-                  <input
-                    name="parent_name"
-                    required
-                    placeholder="e.g. John Doe"
-                    className={inputBox}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Parent Email</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3">
-                    <IconMail />
-                  </span>
-                  <input
-                    name="parent_email"
-                    type="email"
-                    placeholder="e.g. john@example.com"
-                    className={inputBox}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Alternate Email</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3">
-                    <IconMail />
-                  </span>
-                  <input
-                    name="parent_alt_email"
-                    type="email"
-                    className={inputBox}
-                    placeholder="Optional backup email"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Phone*</label>
-                <input
-                  name="parent_phone"
-                  required
-                  className={inputBox + " pl-4"}
-                  placeholder="e.g. +91 99999 88888"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Alt Phone</label>
-                <input
-                  name="parent_alt_phone"
-                  className={inputBox + " pl-4"}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Volunteer Name*</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3">
-                    <IconUser />
-                  </span>
-                  <input
-                    name="volunteer_name"
-                    required
-                    placeholder="e.g. Jane Doe"
-                    className={inputBox}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Volunteer Email</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3">
-                    <IconMail />
-                  </span>
-                  <input
-                    name="volunteer_email"
-                    type="email"
-                    placeholder="e.g. jane@example.com"
-                    className={inputBox}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className={labelClass}>Alt Email</label>
-                <input
-                  name="volunteer_alt_email"
-                  type="email"
-                  className={inputBox + " pl-4"}
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Phone*</label>
-                <input
-                  name="volunteer_phone"
-                  required
-                  className={inputBox + " pl-4"}
-                  placeholder="e.g. +91 90909 77777"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Alt Phone</label>
-                <input
-                  name="volunteer_alt_phone"
-                  className={inputBox + " pl-4"}
-                  placeholder="Optional"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Child/Found Info */}
+          {/* REPORTER INFO */}
           <div className="grid sm:grid-cols-2 gap-4">
+
+            {/* Name */}
             <div>
-              <label className={labelClass}>
-                {role === "parent" ? "Lost Child Name*" : "Found Child Name*"}
-              </label>
-              <input name="child_name" required className={inputBox + " pl-4"} />
+              <label className={labelClass}>Name*</label>
+              <div className="relative">
+                <span className="absolute left-3 top-3"><IconUser /></span>
+                <input className={inputBox} required
+                       value={reporter.name}
+                       onChange={(e) => handleReporter("name", e.target.value)}
+                       placeholder="Your name" />
+              </div>
             </div>
+
+            {/* Email */}
+            <div>
+              <label className={labelClass}>Email*</label>
+              <div className="relative">
+                <span className="absolute left-3 top-3"><IconMail /></span>
+                <input type="email" className={inputBox}
+                       value={reporter.email}
+                       onChange={(e) => handleReporter("email", e.target.value)}
+                       required
+                       placeholder="Email" />
+              </div>
+            </div>
+
+            {/* Alt Email */}
+            <div>
+              <label className={labelClass}>Alternate Email</label>
+              <input className={inputBox + " pl-4"}
+                     value={reporter.altEmail}
+                     onChange={(e) => handleReporter("altEmail", e.target.value)} />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className={labelClass}>Phone*</label>
+              <input className={inputBox + " pl-4"}
+                     value={reporter.phone}
+                     required
+                     onChange={(e) => handleReporter("phone", e.target.value)}
+                     placeholder="Your phone" />
+            </div>
+
+            {/* Alt Phone */}
+            <div>
+              <label className={labelClass}>Alt Phone</label>
+              <input className={inputBox + " pl-4"}
+                     value={reporter.altPhone}
+                     onChange={(e) => handleReporter("altPhone", e.target.value)} />
+            </div>
+          </div>
+
+          {/* CHILD INFO */}
+          <div className="grid sm:grid-cols-2 gap-4">
+
+            <div>
+              <label className={labelClass}>Child Name*</label>
+              <input className={inputBox + " pl-4"} required
+                     value={child.name}
+                     onChange={(e) => handleChild("name", e.target.value)} />
+            </div>
+
             <div>
               <label className={labelClass}>Age*</label>
-              <input
-                name="child_age"
-                type="number"
-                required
-                className={inputBox + " pl-4"}
-              />
+              <input type="number" className={inputBox + " pl-4"} required
+                     value={child.age}
+                     onChange={(e) => handleChild("age", e.target.value)} />
             </div>
+
             <div>
               <label className={labelClass}>Skin Complexion*</label>
-              <select name="skin_complexion" required className={inputBox}>
-                <option value="pale">Pale</option>
-                <option value="fair">Fair</option>
-                <option value="medium">Medium</option>
-                <option value="dark">Dark</option>
+              <select className={inputBox} required
+                      value={child.skin}
+                      onChange={(e) => handleChild("skin", e.target.value)}>
+                <option value="">Select</option>
+                <option value="Pale">Pale</option>
+                <option value="Fair">Fair</option>
+                <option value="Medium">Medium</option>
+                <option value="Dark">Dark</option>
               </select>
             </div>
+
             <div>
               <label className={labelClass}>City*</label>
               <div className="relative">
-                <span className="absolute left-3 top-3">
-                  <IconMapPin />
-                </span>
-                <input
-                  name="city"
-                  required
-                  className={inputBox}
-                  placeholder="e.g. Delhi"
-                />
+                <span className="absolute left-3 top-3"><IconMapPin /></span>
+                <input className={inputBox} required
+                       placeholder="City"
+                       value={child.city}
+                       onChange={(e) => handleChild("city", e.target.value)} />
               </div>
             </div>
+
             {role === "volunteer" && (
               <div className="sm:col-span-2">
-                <label className={labelClass}>Address*</label>
-                <input
-                  name="address"
-                  className={inputBox + " pl-4"}
-                  placeholder="Where found..."
-                />
+                <label className={labelClass}>Address Found*</label>
+                <input className={inputBox + " pl-4"} required
+                       placeholder="Exact place found"
+                       value={child.address}
+                       onChange={(e) => handleChild("address", e.target.value)} />
               </div>
             )}
           </div>
 
-          {/* Birthmarks */}
+          {/* BIRTHMARKS */}
           <div>
-            <label className={labelClass}>Birthmarks (optional)</label>
+            <label className={labelClass}>Birthmarks</label>
+
             {birthMarks.map((b, i) => (
               <div key={i} className="flex items-center mb-2">
                 <input
-                  value={b}
-                  onChange={(e) => handleBirthmarkChange(i, e.target.value)}
                   className={inputBox + " pl-4"}
-                  placeholder="e.g. mole on left cheek"
+                  value={b}
+                  placeholder="e.g. Mole on right cheek"
+                  onChange={(e) => handleBirthmarkChange(i, e.target.value)}
                 />
-                {birthMarks.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBirthmark(i)}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
+                {i > 0 && (
+                  <button type="button" className="ml-3" onClick={() => handleRemoveBirthmark(i)}>
                     <IconX />
                   </button>
                 )}
               </div>
             ))}
-            <button
-              type="button"
-              onClick={handleAddBirthmark}
-              className="text-cyan-600 hover:text-cyan-700 flex items-center mt-2 text-sm font-semibold"
-            >
-              <IconPlus /> Add another birthmark
+
+            <button type="button" className="text-cyan-600 flex items-center mt-2"
+                    onClick={handleAddBirthmark}>
+              <IconPlus /> Add Birthmark
             </button>
           </div>
 
-          {/* Photo Upload */}
+          {/* IMAGE UPLOAD */}
           <div>
-            <label className={labelClass}>Upload Child Photo*</label>
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-8">
-              <IconUpload />
-              <p className="mt-3 text-slate-500">Upload image (JPG/PNG)</p>
-              <input
-                type="file"
-                name="photo"
-                accept="image/*"
-                required
-                onChange={handlePhotoChange}
-                className="mt-4"
-              />
+            <label className={labelClass}>Child Photo*</label>
+            <div className="border-2 border-dashed p-6 rounded-xl text-center">
+              <IconUpload className="mx-auto" />
+              <input type="file" required accept="image/*" className="mt-4"
+                     onChange={handlePhotoChange} />
+
               {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="mt-4 w-40 rounded-lg shadow"
-                />
+                <img src={preview} alt="preview"
+                     className="mt-4 w-40 rounded-lg shadow" />
               )}
             </div>
           </div>
@@ -318,36 +294,11 @@ export default function ReportForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-lg shadow-md transition-all"
+            className="w-full py-3 rounded-lg bg-cyan-600 text-white font-semibold hover:bg-cyan-700"
           >
             {loading ? "Submitting..." : "Submit Report"}
           </button>
         </form>
-
-        {result && (
-          <div
-            className={`mt-6 p-4 rounded-lg ${
-              result.success
-                ? "bg-green-50 border border-green-300"
-                : "bg-red-50 border border-red-300"
-            }`}
-          >
-            {result.success ? (
-              <>
-                <h4 className="font-semibold text-green-700">
-                  Report submitted successfully
-                </h4>
-                <pre className="text-xs mt-2 bg-white rounded-lg p-2 overflow-x-auto">
-                  {JSON.stringify(result.data, null, 2)}
-                </pre>
-              </>
-            ) : (
-              <p className="text-red-700 font-medium">
-                Error: {result.error || "Something went wrong."}
-              </p>
-            )}
-          </div>
-        )}
       </div>
     </section>
   );

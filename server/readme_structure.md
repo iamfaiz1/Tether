@@ -1,19 +1,11 @@
-project/
-│
-├── app/
-│   ├── main.py           # FastAPI entrypoint
-│   ├── database.py       # MongoDB connection setup
-│   ├── models.py         # Data models (Pydantic)
-│   ├── routes/
-│   │   └── upload.py     # Upload route (modular)
-│   └── utils/
-│       └── gridfs_utils.py  # helper functions for image save/fetch
-│
-├── static/
-│   └── index.html        # frontend
-│
-└── requirements.txt
-
-
-to run
-uvicorn app.main:app --reload
+app/
+  main.py
+  routes/
+      report.py
+      match.py
+      images.py
+  utils/
+      database.py
+      models.py
+      recognition.py
+      gridfs_utils.py
