@@ -1,3 +1,4 @@
+```md
 Tether Frontend Project Structure
 
 This document outlines the file and folder structure for the React (Vite) frontend.
@@ -51,3 +52,4 @@ frontend/
         └── icons/
             └── Icons.jsx     # A single file that exports all
                               # SVG icons used in the application.
+```

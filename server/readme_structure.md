@@ -1,3 +1,4 @@
+```md
 Tether Backend Project Structure
 
 This document outlines the file and folder structure for the Python FastAPI backend.
@@ -59,3 +60,5 @@ app/
 └── uploads/              # --- Static File Storage ---
     ├── image1.jpg      # All uploaded child images are
     └── image2.png      # saved here and served statically.
+
+```
