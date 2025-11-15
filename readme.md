@@ -8,11 +8,12 @@
     *We are creating virtual environment for our project. skip if u already created.* \
     run: `py -3.9 -m venv .venv` \
     run: `.venv\Scripts\activate` \
-    run: `pip install -r requirements_server.txt` \
+    done. lets install dependencies now. 
+    3. run: `pip install -r requirements_server.txt` \
     run: `pip install -r requirements_recognise.txt`\
     run: `uvicorn app.main:app --reload` \
     *Now your server is running*
-    3. run: `cd ..` \
+    4. run: `cd ..` \
     to come out of server dir and getting inside frontend dir.\
     run: `cd frontend` \
     run: `npm install` \
