@@ -8,3 +8,6 @@ __pycache__/
 *.jpeg
 *.gif
 *.webp
+
+# json files for database
+*.json
