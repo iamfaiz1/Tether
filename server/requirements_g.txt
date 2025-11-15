@@ -7,5 +7,6 @@ torch
 torchvision
 numpy
 python-jose[cryptography]
-passlib[bcrypt]
+passlib
 axios
+argon2-cffi

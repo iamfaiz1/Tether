@@ -1,0 +1,16 @@
+[
+    {
+        "username": "faixz",
+        "email": "faizmohd2216@gmail.com",
+        "phone": "09569962638",
+        "_id": "78d694ed-d768-47c0-9f29-87a41186fdb3",
+        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$JeT8f29NidF6733v3VsLwQ$EFoXkGmjhLgNwhAN9z+2P6kASD5nVz1D8cdZ8sKB85s"
+    },
+    {
+        "username": "faiz2",
+        "email": "faizmohd221@gmail.com",
+        "phone": "09569962639",
+        "_id": "ac9ed9e1-2ebb-422b-bd17-10e71dd81a89",
+        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$QQhhjNEag9Ca8z4nRMgZAw$c0NR/GjRVv/VwjvYC9918rBpaIp37DNs7FfZP3E3VS8"
+    }
+]

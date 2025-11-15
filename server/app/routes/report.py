@@ -6,7 +6,9 @@ from app.utils.models import (
     ParentInfo, ChildInfo, ParentSubmission,
     VolunteerInfo, FoundChildInfo, VolunteerSubmission, MatchInfo
 )
-from typing import Optional
+# --- NEW ---
+from app.utils.auth_utils import get_current_user
+from typing import Optional, Dict, Any
 
 router = APIRouter()
 
@@ -16,7 +18,7 @@ def find_and_update_match(
     new_submission_id: str,
     new_submission_role: str, # Note: This is "parent" or "volunteer" (singular)
     new_emb: Optional[list]
-) -> Optional[dict]:
+    ) -> Optional[dict]:
     """
     Compares a new submission against the *opposite* collection.
     If a match is found, it updates both records in the database.
@@ -30,13 +32,11 @@ def find_and_update_match(
         search_collection = 'volunteers' # Plural
         my_match_key = "volunteer_report_id"
         their_match_key = "parent_report_id"
-        # FIX: Define the plural collection name for the *new* submission
         my_collection_name = 'parents' # Plural
     else:
         search_collection = 'parents' # Plural
         my_match_key = "parent_report_id"
         their_match_key = "volunteer_report_id"
-        # FIX: Define the plural collection name for the *new* submission
         my_collection_name = 'volunteers' # Plural
         
     all_candidates = json_db.list_submissions(search_collection)
@@ -79,23 +79,26 @@ def find_and_update_match(
         **{my_match_key: matched_id, "score": similarity, "confirmed": False}
     ).model_dump() # Use model_dump() for Pydantic v2
     
-    # FIX: Use the plural 'my_collection_name' variable
     json_db.update_submission(new_submission_id, {"match": new_match_info}, my_collection_name)
 
     # 2. Update the existing submission (the one found in DB)
     existing_match_info = MatchInfo(
         **{their_match_key: new_submission_id, "score": similarity, "confirmed": False}
     ).model_dump()
-    # This was already correct, as 'search_collection' is plural
     json_db.update_submission(matched_id, {"match": existing_match_info}, search_collection)
     
     return best_match_result
 
 
-# --- API Route ---
+
+# -----------------------------------------------------------------------
+# --- API ROUTES ---
 
 @router.post("/report")
 async def create_report(
+    # --- Get the logged-in user ---
+    current_user: Dict[str, Any] = Depends(get_current_user),
+
     # We still accept flat Form data, as the frontend sends this
     role: str = Form(...),
     reporter_name: str = Form(...),
@@ -103,15 +106,20 @@ async def create_report(
     reporter_alt_email: str = Form(""),
     reporter_phone: str = Form(...),
     reporter_alt_phone: str = Form(""),
-    child_name: str = Form(...), # Used for both parent/volunteer (name if known)
-    child_age: int = Form(...), # Used for both parent/volunteer (approx age)
+    child_name: str = Form(...), 
+    child_age: int = Form(...), 
     skin_complexion: str = Form(...),
-    city: str = Form(...), # Used for both parent (city last seen) / volunteer (city found)
+    city: str = Form(...), 
     address: str = Form(""), # Volunteer only
     birthmarks: str = Form("[]"), # Expecting a JSON string
     file: UploadFile = File(...)
 ):
     try:
+        # --- 0. Get User ID ---
+        user_id = current_user.get("_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid user data in token")
+          
         # --- 1. Read Image Bytes & Generate Embedding ---
         image_bytes = await file.read()
         embedding_array = recognition.get_embedding(image_bytes)
@@ -120,15 +128,16 @@ async def create_report(
         parsed_birthmarks = json.loads(birthmarks)
         
         submission_id = None
-        # FIX: Define a variable for the PLURAL collection name
         collection_name = "" 
         
         # --- 2. Create Submission based on Role ---
         if role == 'parent':
-            # FIX: Set plural collection name
             collection_name = "parents"
             # Transform flat data into nested schema
             parent_data = ParentSubmission(
+                # --- CRITICAL FIX IS HERE ---
+                user_id=user_id,
+                # ------------------------------
                 parent=ParentInfo(
                     name=reporter_name,
                     email=reporter_email,
@@ -137,24 +146,24 @@ async def create_report(
                     alt_phone=reporter_alt_phone
                 ),
                 child_entered=ChildInfo(
-                    name=child_name, # Parent knows the name
+                    name=child_name,
                     age=child_age,
                     skin=skin_complexion,
                     birthmarks=parsed_birthmarks,
-                    city=city # This is 'city last seen'
+                    city=city 
                 ),
                 embedding=embedding_list
             )
-            # Insert into 'parents' collection
-            # model_dump(by_alias=True) converts `id` to `_id` for the DB
             submission_data = parent_data.model_dump(by_alias=True)
-            submission_id = json_db.insert_submission(submission_data, collection_name) # Use plural name
+            submission_id = json_db.insert_submission(submission_data, collection_name)
         
         elif role == 'volunteer':
-            # FIX: Set plural collection name
             collection_name = "volunteers"
             # Transform flat data into nested schema
             volunteer_data = VolunteerSubmission(
+                # --- CRITICAL FIX IS HERE ---
+                user_id=user_id,
+                # ------------------------------
                 volunteer=VolunteerInfo(
                     name=reporter_name,
                     email=reporter_email,
@@ -162,18 +171,16 @@ async def create_report(
                     alt_phone=reporter_alt_phone
                 ),
                 found_child=FoundChildInfo(
-                    # Note: We use child_age for approx_age
                     approx_age=child_age,
                     skin=skin_complexion,
                     birthmarks=parsed_birthmarks,
-                    city_found=city, # This is 'city found'
+                    city_found=city,
                     address_found=address
                 ),
                 embedding=embedding_list
             )
-            # Insert into 'volunteers' collection
             submission_data = volunteer_data.model_dump(by_alias=True)
-            submission_id = json_db.insert_submission(submission_data, collection_name) # Use plural name
+            submission_id = json_db.insert_submission(submission_data, collection_name)
         
         else:
             raise HTTPException(status_code=400, detail="Invalid role specified")
@@ -182,13 +189,12 @@ async def create_report(
         image_path = await json_db.save_image_file(file, submission_id)
         
         # --- 4. Update Submission with Image Path ---
-        # FIX: Use the plural 'collection_name' variable
         json_db.update_submission(submission_id, {"image_path": image_path}, collection_name)
         
         # --- 5. Run Matching Logic ---
         match_result = find_and_update_match(
             new_submission_id=submission_id,
-            new_submission_role=role, # Pass singular role here, helper function maps it
+            new_submission_role=role,
             new_emb=embedding_list
         )
 

@@ -3,6 +3,54 @@ from typing import Optional, List, Any
 from datetime import datetime
 import uuid
 
+#--------------------------------------------------------------------
+# --- NEW: Models for User Profile Update ---
+class UserUpdate(BaseModel):
+    """Model for updating user details."""
+    username: str
+    email: str
+    phone: str
+
+class PasswordUpdate(BaseModel):
+    """Model for updating password."""
+    old_password: str
+    new_password: str
+# -----------------------------------------------------------------  
+
+#--------------------------------------------------------------------
+# NEW: Authentication Models
+# --------------------------------------------------------------------
+
+class UserBase(BaseModel):
+    username: str
+    email: str
+    phone: str
+
+class UserIn(UserBase):
+    password: str
+
+class UserDB(UserBase):
+    id: str = Field(alias="_id")
+    hashed_password: str
+
+    class Config:
+        populate_by_name = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserBase # Send user info back on login
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+class LoginRequest(BaseModel):
+    identifier: str # This can be username, email, or phone
+    password: str
+
+
+
+
 # --------------------------------------------------------------------
 # Pydantic Model for Confirm/Reject requests
 # --------------------------------------------------------------------
@@ -67,7 +115,7 @@ class MatchInfo(BaseModel):
 
 class ParentSubmission(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    # user_id: Optional[str] = None # Skipped for now
+    user_id: str # --- NEW --- Link to the UserDB
     parent: ParentInfo
     child_entered: ChildInfo
     image_path: Optional[str] = None # Changed from image_id
@@ -81,7 +129,7 @@ class ParentSubmission(BaseModel):
 
 class VolunteerSubmission(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    # user_id: Optional[str] = None # Skipped for now
+    user_id: Optional[str] = None # --- NEW --- Link to the UserDB
     volunteer: VolunteerInfo
     found_child: FoundChildInfo
     image_path: Optional[str] = None # Changed from image_id

@@ -6,15 +6,20 @@ from fastapi.staticfiles import StaticFiles
 # Import routers
 from app.routes.report import router as report_router
 from app.routes.match import router as match_router
+# --- NEW ---
+from app.routes.auth import router as auth_router 
 
 # Ensure uploads directory exists
 os.makedirs("app/uploads", exist_ok=True)
+# --- NEW ---
+# Ensure db directory exists (for users.json)
+os.makedirs("app/db", exist_ok=True)
 
-app = FastAPI(titleA="Tether Backend (JSON-File Mode)")
+
+app = FastAPI(title="Tether Backend (JSON-File Mode)") # Fixed typo titleA -> title
 
 # CORS (Cross-Origin Resource Sharing)
-# This allows your React frontend (running on port 5173) 
-# to talk to this backend (running on port 8000)
+# ... (no changes) ...
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -38,6 +43,8 @@ app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
 # --- Register API Routes ---
 app.include_router(report_router, prefix="/api")
 app.include_router(match_router, prefix="/api")
+# --- NEW ---
+app.include_router(auth_router, prefix="/api/auth") # Add the auth router
 
 @app.get("/")
 def root():

@@ -15,20 +15,20 @@ UPLOADS_DIR = "app/uploads"
 PARENTS_DB_PATH = os.path.join(DB_DIR, "parents.json")
 VOLUNTEERS_DB_PATH = os.path.join(DB_DIR, "volunteers.json")
 CHILDREN_DB_PATH = os.path.join(DB_DIR, "children.json")
+USERS_DB_PATH = os.path.join(DB_DIR, "users.json")
 
 # --- Initialization ---
 # Ensure database and upload directories exist on startup
 os.makedirs(DB_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-# Ensure all three DB files exist
-for path in [PARENTS_DB_PATH, VOLUNTEERS_DB_PATH, CHILDREN_DB_PATH]:
+# Ensure all FOUR DB files exist
+for path in [PARENTS_DB_PATH, VOLUNTEERS_DB_PATH, CHILDREN_DB_PATH, USERS_DB_PATH]:
     if not os.path.exists(path):
         with open(path, "w") as f:
             json.dump([], f) # Start with an empty list
 
 # --- Internal Helper Functions ---
-
 def _get_db_path(collection_name: str) -> str:
     """Returns the correct file path for a given collection name."""
     if collection_name == "parents":
@@ -37,6 +37,9 @@ def _get_db_path(collection_name: str) -> str:
         return VOLUNTEERS_DB_PATH
     elif collection_name == "children":
         return CHILDREN_DB_PATH
+    # --- NEW ---
+    elif collection_name == "users":
+        return USERS_DB_PATH
     else:
         raise ValueError(f"Unknown collection name: {collection_name}")
 
@@ -87,8 +90,10 @@ def insert_submission(doc: Dict[str, Any], collection_name: str) -> str:
     """
     data = _load_db(collection_name)
     
-    # Add timestamps (Pydantic model already created _id)
-    doc["created_at"] = datetime.utcnow().isoformat()
+   # Add timestamps (Pydantic model already created _id)
+    # --- UPDATED: Only add created_at if it's not the users collection ---
+    if collection_name != "users":
+        doc["created_at"] = datetime.utcnow().isoformat()
     
     data.append(doc)
     _save_db(data, collection_name)
@@ -103,6 +108,71 @@ def find_submission(id_str: str, collection_name: str) -> Optional[Dict[str, Any
             return item
     return None
 
+# --------------------------------------------------------
+# --- NEW ---
+def find_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """Finds a user by their _id."""
+    data = _load_db("users")
+    for user in data:
+        if user.get("_id") == user_id:
+            return user
+    return None
+
+
+# --- NEW ---
+def find_reports_by_user_id(user_id: str) -> List[Dict[str, Any]]:
+    """Finds all reports (parent or volunteer) submitted by a user."""
+    reports = []
+    
+    # Check parents
+    parent_data = _load_db("parents")
+    for report in parent_data:
+        if report.get("user_id") == user_id:
+            reports.append(report)
+            
+    # Check volunteers
+    volunteer_data = _load_db("volunteers")
+    for report in volunteer_data:
+        if report.get("user_id") == user_id:
+            reports.append(report)
+            
+    return reports
+
+
+# --- NEW ---
+def find_user_by_identifier(identifier: str) -> Optional[Dict[str, Any]]:
+    """Finds a user by username, email, or phone."""
+    data = _load_db("users")
+    for user in data:
+        if user.get("username") == identifier or \
+           user.get("email") == identifier or \
+           user.get("phone") == identifier:
+            return user
+    return None
+
+
+# --- NEW: Generic User Update Function ---
+def update_user(user_id: str, updates: Dict[str, Any]):
+    """
+    Finds a user by ID and updates their record.
+    This is separate from update_submission.
+    """
+    data = _load_db("users")
+    
+    found = False
+    for i, item in enumerate(data):
+        if item.get("_id") == user_id:
+            # Merge the updates into the existing item
+            data[i].update(updates) 
+            found = True
+            break       
+    if found:
+        _save_db(data, "users")
+    
+    return found
+
+
+# ------------------------------------------------
 def update_submission(id_str: str, updates: Dict[str, Any], collection_name: str):
     """
     Finds a submission by ID in the specified collection and updates it.
