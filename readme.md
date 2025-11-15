@@ -1,4 +1,4 @@
-# To run the application after Cloning:
+# Instructions to run the application after Cloning:
 
 ## clone the project to your choice of loction
 - ### in terminal run following commands:
