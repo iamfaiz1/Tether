@@ -9,5 +9,19 @@ __pycache__/
 *.gif
 *.webp
 
-# json files for database
-*.json
+
+
+
+# Environment variables
+.env
+.env.development
+.env.test
+.env.production
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+#vscode 
+.vscode/*
