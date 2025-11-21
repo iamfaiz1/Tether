@@ -1,9 +1,0 @@
-[
-    {
-        "username": "faixz",
-        "email": "faizmohd221@gmail.com",
-        "phone": "09569962639",
-        "_id": "726142b1-164e-4b08-b362-3c87463f8b36",
-        "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$A4CQEmKstRZCyBkDoPR+Tw$Y8ZV2MhEbv1HVbhmneav4wMue1GqqGVIvxqf/0CUK1s"
-    }
-]

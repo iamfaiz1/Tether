@@ -22,7 +22,8 @@ app = FastAPI(title="Tether Backend (JSON-File Mode)") # Fixed typo titleA -> ti
 # ... (no changes) ...
 origins = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
 ]
 
 app.add_middleware(
